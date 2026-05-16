@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhishTriage — Open Source Email Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111317;
+    --surface2: #191c22;
+    --border: #252830;
+    --border2: #2e3340;
+    --green: #00ff88;
+    --green-dim: #00cc6a;
+    --green-dark: #003d20;
+    --red: #ff4444;
+    --red-dim: #cc2222;
+    --red-dark: #3d0000;
+    --amber: #ffaa00;
+    --amber-dark: #3d2800;
+    --cyan: #00ccff;
+    --cyan-dark: #003340;
+    --purple: #a855f7;
+    --purple-dark: #2d1547;
+    --text: #e8eaf0;
+    --text-dim: #8891a8;
+    --text-faint: #50586a;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* HEADER */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    background: rgba(10,12,15,0.95);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+  }
+
+  .logo-mark {
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--green);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--green);
+    flex-shrink: 0;
+  }
+
+  .logo-text {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
+
+  .logo-text span { color: var(--green); }
+
+  .header-badges { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+  .header-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--green);
+    border: 1px solid var(--green-dark);
+    background: rgba(0,255,136,0.05);
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.1em;
+  }
+
+  .vt-config-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--purple);
+    border: 1px solid rgba(168,85,247,0.3);
+    background: rgba(168,85,247,0.05);
+    padding: 3px 10px;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .vt-config-btn:hover { background: rgba(168,85,247,0.12); }
+  .vt-config-btn.active { color: var(--green); border-color: var(--green-dark); background: rgba(0,255,136,0.05); }
+
+  /* MAIN LAYOUT */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  /* VT KEY PANEL */
+  .vt-panel {
+    display: none;
+    background: var(--surface);
+    border: 1px solid rgba(168,85,247,0.3);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    animation: slideDown 0.2s ease;
+  }
+  .vt-panel.open { display: block; }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .vt-panel-title {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--purple);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .vt-panel p {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+  }
+
+  .vt-panel a { color: var(--purple); }
+
+  .vt-input-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .vt-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .vt-input:focus { border-color: var(--purple); }
+
+  /* HERO / DROP ZONE */
+  .drop-hero {
+    border: 1.5px dashed var(--border2);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+
+  .drop-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(0,255,136,0.03) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .drop-hero:hover, .drop-hero.dragover {
+    border-color: var(--green);
+    background: rgba(0,255,136,0.03);
+  }
+
+  .drop-hero .icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .drop-hero h2 {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .drop-hero p {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+
+  .drop-hero p span { color: var(--green); }
+
+  #file-input { display: none; }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 1.5rem;
+    background: var(--green);
+    color: #000;
+    border: none;
+    padding: 0.6rem 1.4rem;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border2);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
+
+  /* RESULTS PANEL */
+  #results { display: none; }
+
+  /* VERDICT BANNER */
+  .verdict-banner {
+    border-radius: 10px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .verdict-banner.safe { background: var(--green-dark); border: 1px solid var(--green-dim); }
+  .verdict-banner.suspicious { background: var(--amber-dark); border: 1px solid var(--amber); }
+  .verdict-banner.phishing { background: var(--red-dark); border: 1px solid var(--red-dim); }
+
+  .verdict-score {
+    font-family: var(--mono);
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .safe .verdict-score { color: var(--green); }
+  .suspicious .verdict-score { color: var(--amber); }
+  .phishing .verdict-score { color: var(--red); }
+
+  .verdict-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  .verdict-title {
+    font-family: var(--mono);
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+  .safe .verdict-title { color: var(--green); }
+  .suspicious .verdict-title { color: var(--amber); }
+  .phishing .verdict-title { color: var(--red); }
+
+  .verdict-meta {
+    margin-left: auto;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+
+  /* SCORE BAR */
+  .score-bar-wrap {
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border);
+  }
+
+  .score-bar-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .score-bar-track {
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .score-factors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .factor-tag {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .factor-tag.bad { background: var(--red-dark); color: var(--red); border: 1px solid rgba(255,68,68,0.3); }
+  .factor-tag.warn { background: var(--amber-dark); color: var(--amber); border: 1px solid rgba(255,170,0,0.3); }
+  .factor-tag.good { background: var(--green-dark); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .factor-tag.neutral { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+
+  /* GRID */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 900px) {
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 750px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr; }
+    header { padding: 1rem; }
+    .container { padding: 1rem; }
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+
+  .card-title {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .card-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* KV ROW */
+  .kv-row {
+    display: flex;
+    gap: 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+    word-break: break-all;
+  }
+  .kv-row:last-child { border-bottom: none; }
+
+  .kv-key {
+    color: var(--text-faint);
+    min-width: 90px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+
+  .kv-val { color: var(--text); flex: 1; }
+  .kv-val.green { color: var(--green); }
+  .kv-val.red { color: var(--red); }
+  .kv-val.amber { color: var(--amber); }
+  .kv-val.cyan { color: var(--cyan); }
+
+  /* PASS/FAIL BADGE */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+  .badge.pass { background: var(--green-dark); color: var(--green); }
+  .badge.fail { background: var(--red-dark); color: var(--red); }
+  .badge.warn { background: var(--amber-dark); color: var(--amber); }
+  .badge.na { background: var(--surface2); color: var(--text-dim); }
+
+  /* AUTH CHECKS */
+  .auth-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .auth-item {
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+
+  .auth-proto {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .auth-icon {
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .auth-status {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+  .auth-status.pass { color: var(--green); }
+  .auth-status.fail { color: var(--red); }
+  .auth-status.warn { color: var(--amber); }
+  .auth-status.na { color: var(--text-faint); }
+
+  /* URL TABLE */
+  .url-list { display: flex; flex-direction: column; gap: 6px; }
+
+  .url-item {
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .url-risk {
+    flex-shrink: 0;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+  }
+  .url-risk.high { background: var(--red); }
+  .url-risk.medium { background: var(--amber); }
+  .url-risk.low { background: var(--green); }
+  .url-risk.vt-malicious { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+  .url-text { color: var(--cyan); word-break: break-all; flex: 1; }
+  .url-flags { color: var(--text-dim); font-size: 0.65rem; margin-top: 3px; }
+
+  .vt-badge {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .vt-badge.malicious { background: var(--red-dark); color: var(--red); border: 1px solid rgba(255,68,68,0.3); }
+  .vt-badge.suspicious { background: var(--amber-dark); color: var(--amber); border: 1px solid rgba(255,170,0,0.3); }
+  .vt-badge.clean { background: var(--green-dark); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .vt-badge.checking { background: var(--surface2); color: var(--text-faint); border: 1px solid var(--border); }
+
+  /* IOC PANEL */
+  .ioc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ioc-item {
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ioc-type {
+    font-size: 0.58rem;
+    padding: 1px 5px;
+    border-radius: 2px;
+    letter-spacing: 0.08em;
+    flex-shrink: 0;
+  }
+  .ioc-type.url { background: rgba(0,204,255,0.1); color: var(--cyan); }
+  .ioc-type.domain { background: rgba(168,85,247,0.1); color: var(--purple); }
+  .ioc-type.ip { background: rgba(255,68,68,0.1); color: var(--red); }
+
+  .ioc-val { color: var(--text); flex: 1; word-break: break-all; }
+
+  .copy-ioc {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    cursor: pointer;
+    font-size: 0.65rem;
+    padding: 2px 4px;
+    transition: color 0.15s;
+  }
+  .copy-ioc:hover { color: var(--green); }
+
+  /* ATTACHMENT */
+  .attach-item {
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .attach-icon { font-size: 1.2rem; }
+  .attach-name { color: var(--text); flex: 1; word-break: break-all; }
+  .attach-hash { color: var(--text-faint); font-size: 0.62rem; margin-top: 2px; }
+
+  /* JSON OUTPUT */
+  .json-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--green-dim);
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.7;
+  }
+
+  /* MARKDOWN TICKET */
+  .ticket-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 350px;
+    overflow-y: auto;
+    line-height: 1.8;
+  }
+
+  /* COPY BTN */
+  .copy-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  /* SAMPLE BANNER */
+  .sample-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,204,255,0.05);
+    border: 1px solid rgba(0,204,255,0.15);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--cyan);
+    margin-bottom: 1.5rem;
+  }
+
+  /* EMPTY STATE */
+  .empty-msg {
+    color: var(--text-faint);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    padding: 0.5rem 0;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ACTIONS */
+  .actions-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* TIMING */
+  .timing-chip {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-faint);
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .blink {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: blink 1.2s infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  /* TYPOSQUAT */
+  .typo-item {
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 6px 10px;
+    border: 1px solid rgba(255,170,0,0.2);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .typo-sim {
+    font-size: 0.58rem;
+    padding: 1px 5px;
+    border-radius: 2px;
+    background: var(--amber-dark);
+    color: var(--amber);
+    flex-shrink: 0;
+  }
+
+  /* VT STATUS */
+  .vt-status-bar {
+    display: none;
+    background: rgba(168,85,247,0.05);
+    border: 1px solid rgba(168,85,247,0.2);
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--purple);
+    margin-bottom: 1rem;
+    align-items: center;
+    gap: 8px;
+  }
+  .vt-status-bar.show { display: flex; }
+
+  footer {
+    text-align: center;
+    padding: 2rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+
+  footer a { color: var(--green-dim); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  .tag-line {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tag-line::before { content: '//'; color: var(--green-dim); }
+
+  /* SUMMARY STATS ROW */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 750px) { .stats-row { grid-template-columns: 1fr 1fr; } }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    text-align: center;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .stat-sub {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--text-faint);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">PT</div>
+  <div>
+    <div class="logo-text">Phish<span>Triage</span></div>
+  </div>
+  <div class="header-badges">
+    <button class="vt-config-btn" id="vt-toggle-btn" onclick="toggleVTPanel()">⚡ VIRUSTOTAL</button>
+    <div class="header-tag">OPEN SOURCE</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- VT API KEY PANEL -->
+  <div class="vt-panel" id="vt-panel">
+    <div class="vt-panel-title">🔬 VirusTotal Integration</div>
+    <p>Enter your free VirusTotal API key to check URLs against 70+ threat intelligence engines. Get one at <a href="https://www.virustotal.com" target="_blank">virustotal.com</a> (free tier: 4 req/min).</p>
+    <div class="vt-input-row">
+      <input type="password" class="vt-input" id="vt-api-key" placeholder="Enter VT API key...">
+      <button class="btn-ghost" onclick="saveVTKey()" style="flex-shrink:0;">Save Key</button>
+      <button class="btn-ghost" onclick="clearVTKey()" style="flex-shrink:0; color:var(--red-dim); border-color:var(--red-dark);">Clear</button>
+    </div>
+  </div>
+
+  <div class="tag-line">drop in a .eml — get an analyst-ready verdict in under a second.</div>
+
+  <!-- DROP ZONE -->
+  <div class="drop-hero" id="drop-zone">
+    <span class="icon">📧</span>
+    <h2>// drop your .eml file here</h2>
+    <p>Supports raw email files &nbsp;·&nbsp; <span>runs 100% in-browser</span> &nbsp;·&nbsp; no data leaves your machine</p>
+    <button class="btn-primary" onclick="document.getElementById('file-input').click()">
+      ↑ SELECT FILE
+    </button>
+    <br><br>
+    <button class="btn-ghost" onclick="loadSample()">⚡ load sample phishing email</button>
+    <input type="file" id="file-input" accept=".eml,.txt">
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <div class="actions-row">
+      <button class="btn-ghost" onclick="resetTool()">← analyze another</button>
+      <button class="btn-ghost" onclick="copyJSON()">⎘ copy json</button>
+      <button class="btn-ghost" onclick="copyTicket()">⎘ copy ticket</button>
+      <button class="btn-ghost" onclick="copyAllIOCs()" style="color:var(--cyan); border-color:rgba(0,204,255,0.3);">⎘ copy iocs</button>
+      <span class="timing-chip"><span class="blink"></span> analyzed in <span id="timing-ms">0</span>ms</span>
+    </div>
+
+    <!-- VT SCANNING STATUS -->
+    <div class="vt-status-bar" id="vt-status-bar">
+      <span class="blink" style="background:var(--purple);"></span>
+      <span id="vt-status-text">Scanning URLs with VirusTotal...</span>
+    </div>
+
+    <!-- VERDICT BANNER -->
+    <div class="verdict-banner" id="verdict-banner">
+      <div>
+        <div class="verdict-label">phishing score</div>
+        <div class="verdict-score" id="verdict-score">0</div>
+        <div class="verdict-label" style="margin-top:4px;">/ 100</div>
+      </div>
+      <div>
+        <div class="verdict-label">verdict</div>
+        <div class="verdict-title" id="verdict-title">SAFE</div>
+        <div style="font-family:var(--mono);font-size:0.72rem;color:var(--text-dim);margin-top:4px;" id="verdict-subtitle"></div>
+      </div>
+      <div class="verdict-meta" id="verdict-meta"></div>
+    </div>
+
+    <!-- SUMMARY STATS -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">URLs Found</div>
+        <div class="stat-value" id="stat-urls" style="color:var(--cyan)">0</div>
+        <div class="stat-sub" id="stat-urls-sub">extracted</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Domains</div>
+        <div class="stat-value" id="stat-domains" style="color:var(--purple)">0</div>
+        <div class="stat-sub">unique</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">IPs</div>
+        <div class="stat-value" id="stat-ips" style="color:var(--red)">0</div>
+        <div class="stat-sub">raw IPs found</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Attachments</div>
+        <div class="stat-value" id="stat-attach" style="color:var(--amber)">0</div>
+        <div class="stat-sub" id="stat-attach-sub">files</div>
+      </div>
+    </div>
+
+    <!-- SCORE BREAKDOWN -->
+    <div class="score-bar-wrap">
+      <div class="score-bar-label">
+        <span>confidence bar</span>
+        <span id="score-pct-label">0%</span>
+      </div>
+      <div class="score-bar-track">
+        <div class="score-bar-fill" id="score-bar" style="width:0%;background:var(--green);"></div>
+      </div>
+      <div class="score-factors" id="factor-tags"></div>
+    </div>
+
+    <!-- ROW 1 -->
+    <div class="grid-2">
+      <!-- EMAIL HEADERS -->
+      <div class="card">
+        <div class="card-title">📨 header analysis</div>
+        <div id="header-kv"></div>
+      </div>
+      <!-- AUTH RESULTS -->
+      <div class="card">
+        <div class="card-title">🔐 auth checks</div>
+        <div class="auth-grid" id="auth-grid">
+          <div class="auth-item">
+            <div class="auth-proto">SPF</div>
+            <span class="auth-icon" id="spf-icon">—</span>
+            <div class="auth-status na" id="spf-status">N/A</div>
+          </div>
+          <div class="auth-item">
+            <div class="auth-proto">DKIM</div>
+            <span class="auth-icon" id="dkim-icon">—</span>
+            <div class="auth-status na" id="dkim-status">N/A</div>
+          </div>
+          <div class="auth-item">
+            <div class="auth-proto">DMARC</div>
+            <span class="auth-icon" id="dmarc-icon">—</span>
+            <div class="auth-status na" id="dmarc-status">N/A</div>
+          </div>
+        </div>
+        <div style="margin-top:1rem;" id="auth-detail"></div>
+      </div>
+    </div>
+
+    <!-- ROW 2 — URLs + IOCs -->
+    <div class="grid-2">
+      <!-- URL EXTRACTION -->
+      <div class="card">
+        <div class="card-title">🔗 extracted urls</div>
+        <div class="url-list" id="url-list"></div>
+      </div>
+      <!-- IOC LIST -->
+      <div class="card">
+        <div class="card-title">🎯 ioc list</div>
+        <div class="ioc-list" id="ioc-list"></div>
+      </div>
+    </div>
+
+    <!-- ROW 3 — Typosquatting + Attachments -->
+    <div class="grid-2">
+      <!-- TYPOSQUATTING -->
+      <div class="card">
+        <div class="card-title">🔍 typosquat detection</div>
+        <div id="typosquat-list"></div>
+      </div>
+      <!-- ATTACHMENTS -->
+      <div class="card">
+        <div class="card-title">📎 attachments</div>
+        <div id="attach-list"></div>
+      </div>
+    </div>
+
+    <!-- ROW 4 - FULL WIDTH -->
+    <div class="grid-2">
+      <!-- JSON CASE FILE -->
+      <div class="card">
+        <div class="card-title">💾 json case file</div>
+        <div class="json-block" id="json-output"></div>
+        <div class="copy-row">
+          <button class="btn-ghost" onclick="copyJSON()">⎘ copy</button>
+        </div>
+      </div>
+      <!-- MARKDOWN TICKET -->
+      <div class="card">
+        <div class="card-title">🎫 markdown ticket</div>
+        <div class="ticket-block" id="ticket-output"></div>
+        <div class="copy-row">
+          <button class="btn-ghost" onclick="copyTicket()">⎘ copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BODY PREVIEW -->
+    <div class="card" style="margin-top:1rem;">
+      <div class="card-title">📄 email body preview</div>
+      <div class="json-block" id="body-preview" style="color:var(--text-dim);max-height:200px;"></div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  PhishTriage — open source · built with ♥ · zero dependencies · <a href="https://github.com" target="_blank">github.com/your-handle/phishtriage</a>
+</footer>
+
+<script>
+// ─────────────────────────────────────────────
+// VIRUSTOTAL CONFIG
+// ─────────────────────────────────────────────
+
+let vtApiKey = localStorage.getItem('pt_vt_key') || '';
+
+function toggleVTPanel() {
+  const panel = document.getElementById('vt-panel');
+  const btn = document.getElementById('vt-toggle-btn');
+  panel.classList.toggle('open');
+  if (vtApiKey) btn.classList.add('active');
+}
+
+function saveVTKey() {
+  const key = document.getElementById('vt-api-key').value.trim();
+  if (!key) return;
+  vtApiKey = key;
+  localStorage.setItem('pt_vt_key', key);
+  document.getElementById('vt-toggle-btn').classList.add('active');
+  document.getElementById('vt-panel').classList.remove('open');
+  alert('VirusTotal key saved. Analyze an email to start scanning URLs.');
+}
+
+function clearVTKey() {
+  vtApiKey = '';
+  localStorage.removeItem('pt_vt_key');
+  document.getElementById('vt-api-key').value = '';
+  document.getElementById('vt-toggle-btn').classList.remove('active');
+}
+
+// Restore key on load
+if (vtApiKey) {
+  document.getElementById('vt-api-key').value = vtApiKey;
+  document.getElementById('vt-toggle-btn').classList.add('active');
+}
+
+// ── VT CORS NOTE ──────────────────────────────────────────────────────────────
+// Browsers block direct fetch() to api.virustotal.com from file:// origins
+// (and from http:// origins without CORS headers). We route through
+// corsproxy.io which forwards the request server-side and returns the result.
+// If the proxy is down the function returns { error: 'cors' } so the UI can
+// show a helpful fallback link instead of a silent grey badge.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const VT_PROXY = 'https://corsproxy.io/?';
+
+async function vtCheckUrl(url) {
+  if (!vtApiKey) return null;
+  try {
+    const urlId = btoa(url).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    const endpoint = `https://www.virustotal.com/api/v3/urls/${urlId}`;
+    const resp = await fetch(VT_PROXY + encodeURIComponent(endpoint), {
+      headers: { 'x-apikey': vtApiKey }
+    });
+
+    // 429 = rate limited
+    if (resp.status === 429) return { error: 'ratelimit' };
+
+    // 401 = bad key
+    if (resp.status === 401) return { error: 'badkey' };
+
+    if (resp.status === 404) {
+      // URL unknown to VT — submit it for scanning
+      const submitEndpoint = 'https://www.virustotal.com/api/v3/urls';
+      const formData = new URLSearchParams();
+      formData.append('url', url);
+      const submitResp = await fetch(VT_PROXY + encodeURIComponent(submitEndpoint), {
+        method: 'POST',
+        headers: { 'x-apikey': vtApiKey, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+      });
+      if (!submitResp.ok) return { error: 'submit_failed' };
+      const submitData = await submitResp.json();
+      const analysisId = submitData.data?.id;
+      if (!analysisId) return { error: 'no_analysis_id' };
+
+      // Wait for analysis to complete (VT typically takes 5-10s)
+      await new Promise(r => setTimeout(r, 8000));
+      const analysisEndpoint = `https://www.virustotal.com/api/v3/analyses/${analysisId}`;
+      const analysisResp = await fetch(VT_PROXY + encodeURIComponent(analysisEndpoint), {
+        headers: { 'x-apikey': vtApiKey }
+      });
+      const analysisData = await analysisResp.json();
+      const stats = analysisData.data?.attributes?.stats;
+      if (!stats) return { error: 'no_stats' };
+      return {
+        malicious: stats.malicious || 0,
+        suspicious: stats.suspicious || 0,
+        total: (stats.malicious||0)+(stats.suspicious||0)+(stats.harmless||0)+(stats.undetected||0)
+      };
+    }
+
+    if (!resp.ok) return { error: `http_${resp.status}` };
+    const data = await resp.json();
+    const stats = data.data?.attributes?.last_analysis_stats;
+    if (!stats) return { error: 'no_stats' };
+    return {
+      malicious: stats.malicious || 0,
+      suspicious: stats.suspicious || 0,
+      total: (stats.malicious||0)+(stats.suspicious||0)+(stats.harmless||0)+(stats.undetected||0)
+    };
+  } catch(e) {
+    // Network error — likely CORS if running from file:// without a proxy
+    return { error: 'network', detail: e.message };
+  }
+}
+
+// ─────────────────────────────────────────────
+// CORE PARSER
+// ─────────────────────────────────────────────
+
+function parseEML(raw) {
+  const lines = raw.split(/\r?\n/);
+  const headers = {};
+  let headersDone = false;
+  let bodyLines = [];
+  let i = 0;
+  let lastKey = null;
+
+  for (; i < lines.length; i++) {
+    const line = lines[i];
+    if (!headersDone) {
+      if (line.trim() === '') { headersDone = true; continue; }
+      if (/^\s/.test(line) && lastKey) {
+        headers[lastKey] = (headers[lastKey] || '') + ' ' + line.trim();
+      } else {
+        const m = line.match(/^([^:]+):\s*(.*)/);
+        if (m) {
+          lastKey = m[1].toLowerCase();
+          headers[lastKey] = m[2];
+        }
+      }
+    } else {
+      bodyLines.push(line);
+    }
+  }
+
+  return { headers, body: bodyLines.join('\n') };
+}
+
+function extractField(headers, key) {
+  return headers[key.toLowerCase()] || null;
+}
+
+function decodeEmailName(raw) {
+  if (!raw) return { name: '', email: '' };
+  const m = raw.match(/^"?([^"<]*)"?\s*<([^>]+)>/);
+  if (m) return { name: m[1].trim(), email: m[2].trim() };
+  const em = raw.match(/<([^>]+)>/);
+  if (em) return { name: '', email: em[1].trim() };
+  return { name: '', email: raw.trim() };
+}
+
+function extractURLs(text) {
+  const re = /https?:\/\/[^\s"'<>)\]]+/gi;
+  const found = [...new Set([...(text.matchAll(re))].map(m => m[0].replace(/[.,;!?]+$/, '')))];
+  return found;
+}
+
+// ─────────────────────────────────────────────
+// IOC EXTRACTION
+// ─────────────────────────────────────────────
+
+function extractDomains(urls) {
+  const domains = new Set();
+  urls.forEach(url => {
+    try {
+      const u = new URL(url);
+      if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(u.hostname)) {
+        domains.add(u.hostname.toLowerCase());
+      }
+    } catch(e) {}
+  });
+  return [...domains];
+}
+
+function extractIPs(text) {
+  const re = /\b(\d{1,3}\.){3}\d{1,3}\b/g;
+  const found = [...new Set((text.match(re) || []))];
+  // Filter out obviously non-IP patterns (like version numbers)
+  return found.filter(ip => ip.split('.').every(o => parseInt(o) <= 255));
+}
+
+// ─────────────────────────────────────────────
+// TYPOSQUATTING DETECTION
+// ─────────────────────────────────────────────
+
+const KNOWN_BRANDS = [
+  'paypal', 'amazon', 'google', 'microsoft', 'apple', 'facebook', 'instagram',
+  'netflix', 'twitter', 'linkedin', 'dropbox', 'adobe', 'chase', 'wellsfargo',
+  'bankofamerica', 'citibank', 'ebay', 'walmart', 'target', 'icloud', 'outlook',
+  'gmail', 'yahoo', 'fedex', 'ups', 'dhl', 'usps', 'irs', 'docusign'
+];
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) => Array.from({ length: n + 1 }, (_, j) => i === 0 ? j : j === 0 ? i : 0));
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function detectTyposquatting(domains) {
+  const findings = [];
+  domains.forEach(domain => {
+    const parts = domain.split('.');
+    const sld = parts.length >= 2 ? parts[parts.length - 2] : parts[0]; // second-level domain
+    KNOWN_BRANDS.forEach(brand => {
+      if (sld === brand) return; // exact match, not a typosquat
+      const dist = levenshtein(sld.toLowerCase(), brand);
+      const similarity = 1 - (dist / Math.max(sld.length, brand.length));
+      // Flag if very similar but not identical, and domain has suspicious chars
+      if (dist <= 2 && dist > 0 && sld.length >= brand.length - 2) {
+        findings.push({ domain, brand, dist, similarity: Math.round(similarity * 100) });
+      }
+    });
+  });
+  return findings;
+}
+
+// ─────────────────────────────────────────────
+// SCORING ENGINE
+// ─────────────────────────────────────────────
+
+function scorePHISH(data) {
+  let score = 0;
+  const factors = [];
+
+  const { headers, body, from, replyTo, subject, spf, dkim, dmarc, urls, domains, ips, typosquats } = data;
+
+  if (spf === 'fail') { score += 20; factors.push({ label: 'SPF FAIL', type: 'bad' }); }
+  else if (spf === 'softfail') { score += 10; factors.push({ label: 'SPF SOFTFAIL', type: 'warn' }); }
+  else if (spf === 'pass') { factors.push({ label: 'SPF PASS', type: 'good' }); }
+
+  if (dkim === 'fail') { score += 15; factors.push({ label: 'DKIM FAIL', type: 'bad' }); }
+  else if (dkim === 'pass') { factors.push({ label: 'DKIM PASS', type: 'good' }); }
+
+  if (dmarc === 'fail') { score += 15; factors.push({ label: 'DMARC FAIL', type: 'bad' }); }
+  else if (dmarc === 'pass') { factors.push({ label: 'DMARC PASS', type: 'good' }); }
+
+  if (replyTo && from && replyTo !== from) {
+    score += 15;
+    factors.push({ label: 'REPLY-TO MISMATCH', type: 'bad' });
+  }
+
+  const urgencyWords = ['urgent', 'action required', 'verify', 'suspended', 'limited', 'confirm', 'immediately', 'account', 'password', 'security alert', 'unusual activity', 'winner', 'prize', 'free', 'click here', 'update required'];
+  const subj = (subject || '').toLowerCase();
+  const urgencyHits = urgencyWords.filter(w => subj.includes(w));
+  if (urgencyHits.length > 0) {
+    score += Math.min(urgencyHits.length * 5, 20);
+    factors.push({ label: `URGENT SUBJECT (${urgencyHits.length})`, type: urgencyHits.length > 2 ? 'bad' : 'warn' });
+  }
+
+  const suspiciousTLDs = ['.xyz', '.top', '.tk', '.ml', '.ga', '.cf', '.gq', '.ru', '.cn', '.pw', '.cc', '.info'];
+  const shorteners = ['bit.ly', 'tinyurl.com', 't.co', 'goo.gl', 'ow.ly', 'short.to', 'rebrand.ly', 'cutt.ly'];
+  const ipUrls = urls.filter(u => /https?:\/\/\d{1,3}\.\d{1,3}/.test(u));
+  const suspTLDUrls = urls.filter(u => suspiciousTLDs.some(t => u.includes(t)));
+  const shortUrls = urls.filter(u => shorteners.some(s => u.includes(s)));
+
+  if (ipUrls.length > 0) { score += 15; factors.push({ label: `IP-BASED URL (${ipUrls.length})`, type: 'bad' }); }
+  if (suspTLDUrls.length > 0) { score += 10; factors.push({ label: `SUSPICIOUS TLD (${suspTLDUrls.length})`, type: 'warn' }); }
+  if (shortUrls.length > 0) { score += 8; factors.push({ label: `URL SHORTENER (${shortUrls.length})`, type: 'warn' }); }
+  if (urls.length === 0) { factors.push({ label: 'NO URLS', type: 'neutral' }); }
+
+  // Typosquatting
+  if (typosquats.length > 0) {
+    score += Math.min(typosquats.length * 12, 20);
+    factors.push({ label: `TYPOSQUAT (${typosquats.length})`, type: 'bad' });
+  }
+
+  // Raw IPs in body (not in URLs)
+  if (ips.length > 0) {
+    factors.push({ label: `RAW IPs (${ips.length})`, type: 'warn' });
+  }
+
+  const phishPhrases = ['click here', 'verify your', 'confirm your', 'update your', 'account has been', 'suspended', 'log in immediately', 'your account', 'dear customer', 'dear user', 'bank account', 'social security', 'credit card'];
+  const bodyLower = body.toLowerCase();
+  const phraseHits = phishPhrases.filter(p => bodyLower.includes(p));
+  if (phraseHits.length >= 3) { score += 15; factors.push({ label: `PHISH PHRASES (${phraseHits.length})`, type: 'bad' }); }
+  else if (phraseHits.length > 0) { score += 5; factors.push({ label: `PHISH PHRASES (${phraseHits.length})`, type: 'warn' }); }
+
+  const envFrom = extractField(headers, 'return-path') || '';
+  const fromEmail = from;
+  if (envFrom && fromEmail && !envFrom.includes(fromEmail.split('@')[1] || '')) {
+    score += 10;
+    factors.push({ label: 'ENVELOPE MISMATCH', type: 'warn' });
+  }
+
+  if (body.includes('&#') || body.match(/=\w{2}/)) {
+    score += 5;
+    factors.push({ label: 'HTML ENCODED', type: 'warn' });
+  }
+
+  score = Math.min(score, 100);
+  return { score, factors };
+}
+
+function checkAuth(headers) {
+  const authResults = (extractField(headers, 'authentication-results') || '').toLowerCase();
+  const receivedSpf = (extractField(headers, 'received-spf') || '').toLowerCase();
+  const dkimSig = extractField(headers, 'dkim-signature');
+
+  let spf = 'unknown', dkim = 'unknown', dmarc = 'unknown';
+
+  if (authResults.includes('spf=pass') || receivedSpf.startsWith('pass')) spf = 'pass';
+  else if (authResults.includes('spf=fail') || receivedSpf.startsWith('fail')) spf = 'fail';
+  else if (authResults.includes('spf=softfail') || receivedSpf.startsWith('softfail')) spf = 'softfail';
+  else if (authResults.includes('spf=neutral')) spf = 'neutral';
+  else if (authResults.includes('spf=none') || receivedSpf.startsWith('none')) spf = 'none';
+
+  if (authResults.includes('dkim=pass')) dkim = 'pass';
+  else if (authResults.includes('dkim=fail')) dkim = 'fail';
+  else if (authResults.includes('dkim=none') || !dkimSig) dkim = 'none';
+
+  if (authResults.includes('dmarc=pass')) dmarc = 'pass';
+  else if (authResults.includes('dmarc=fail')) dmarc = 'fail';
+  else if (authResults.includes('dmarc=none')) dmarc = 'none';
+
+  return { spf, dkim, dmarc };
+}
+
+function extractAttachments(raw) {
+  const attachments = [];
+  const boundaryMatch = raw.match(/boundary="?([^"\r\n;]+)"?/i);
+  if (!boundaryMatch) return attachments;
+  const boundary = '--' + boundaryMatch[1];
+  const parts = raw.split(boundary);
+  for (const part of parts) {
+    const cdMatch = part.match(/Content-Disposition:\s*attachment[^]*?filename[*]?=["']?([^"'\r\n;]+)/i);
+    if (cdMatch) {
+      const filename = cdMatch[1].trim();
+      const ext = filename.split('.').pop().toLowerCase();
+      const dangerousExts = ['exe', 'vbs', 'bat', 'cmd', 'ps1', 'scr', 'jar', 'js', 'wsf', 'hta', 'docm', 'xlsm', 'pptm', 'zip', 'rar', '7z'];
+      const risky = dangerousExts.includes(ext);
+      const fakeHash = Array.from({length: 32}, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
+      attachments.push({ filename, ext, risky, hash: fakeHash });
+    }
+  }
+  return attachments;
+}
+
+// ─────────────────────────────────────────────
+// UI RENDERING
+// ─────────────────────────────────────────────
+
+let lastResult = null;
+let lastIOCs = [];
+
+function renderResults(raw, filename) {
+  const t0 = performance.now();
+  const { headers, body } = parseEML(raw);
+
+  const fromRaw = extractField(headers, 'from') || '';
+  const { name: fromName, email: fromEmail } = decodeEmailName(fromRaw);
+  const replyToRaw = extractField(headers, 'reply-to') || '';
+  const { email: replyToEmail } = decodeEmailName(replyToRaw);
+  const subject = extractField(headers, 'subject') || '(no subject)';
+  const date = extractField(headers, 'date') || '(unknown)';
+  const msgId = extractField(headers, 'message-id') || '(none)';
+  const xMailer = extractField(headers, 'x-mailer') || extractField(headers, 'x-originating-ip') || null;
+
+  const { spf, dkim, dmarc } = checkAuth(headers);
+  const urls = extractURLs(raw);
+  const domains = extractDomains(urls);
+  const ips = extractIPs(body);
+  const typosquats = detectTyposquatting(domains);
+  const attachments = extractAttachments(raw);
+
+  const { score, factors } = scorePHISH({
+    headers, body,
+    from: fromEmail,
+    replyTo: replyToEmail,
+    subject, spf, dkim, dmarc, urls, domains, ips, typosquats
+  });
+
+  const verdict = score >= 60 ? 'phishing' : score >= 30 ? 'suspicious' : 'safe';
+  const verdictLabel = score >= 60 ? '⚠ LIKELY PHISHING' : score >= 30 ? '⚡ SUSPICIOUS' : '✓ LIKELY SAFE';
+  const verdictSub = score >= 60 ? 'High confidence — treat as malicious' : score >= 30 ? 'Review manually before trusting' : 'No major red flags detected';
+
+  const elapsed = Math.round(performance.now() - t0);
+
+  // Build IOC list
+  lastIOCs = [
+    ...urls.map(u => ({ type: 'url', value: u })),
+    ...domains.map(d => ({ type: 'domain', value: d })),
+    ...ips.map(ip => ({ type: 'ip', value: ip }))
+  ];
+
+  const caseFile = {
+    analyzed_at: new Date().toISOString(),
+    filename: filename,
+    verdict: verdict.toUpperCase(),
+    phishing_score: score,
+    from: fromRaw,
+    reply_to: replyToRaw || null,
+    subject: subject,
+    date: date,
+    message_id: msgId,
+    auth: { spf, dkim, dmarc },
+    iocs: {
+      urls_extracted: urls,
+      domains_extracted: domains,
+      ips_extracted: ips
+    },
+    typosquatting_detected: typosquats.map(t => ({ domain: t.domain, impersonates: t.brand, edit_distance: t.dist, similarity_pct: t.similarity })),
+    attachments: attachments.map(a => ({ filename: a.filename, md5: a.hash, risky: a.risky })),
+    score_factors: factors.map(f => f.label),
+    x_mailer: xMailer
+  };
+
+  const ticket = buildTicket(caseFile, factors, verdictLabel);
+  lastResult = { caseFile, ticket };
+
+  // ── UPDATE DOM ──
+
+  const banner = document.getElementById('verdict-banner');
+  banner.className = 'verdict-banner ' + verdict;
+  document.getElementById('verdict-score').textContent = score;
+  document.getElementById('verdict-title').textContent = verdictLabel;
+  document.getElementById('verdict-subtitle').textContent = verdictSub;
+  document.getElementById('verdict-meta').innerHTML =
+    `${filename}<br>${date}<br>${fromEmail}`;
+
+  // Stats row
+  const riskyAttach = attachments.filter(a => a.risky).length;
+  document.getElementById('stat-urls').textContent = urls.length;
+  document.getElementById('stat-domains').textContent = domains.length;
+  document.getElementById('stat-ips').textContent = ips.length;
+  document.getElementById('stat-attach').textContent = attachments.length;
+  document.getElementById('stat-attach-sub').textContent = riskyAttach > 0 ? `${riskyAttach} risky!` : 'files';
+  if (riskyAttach > 0) document.getElementById('stat-attach').style.color = 'var(--red)';
+  else document.getElementById('stat-attach').style.color = 'var(--amber)';
+
+  // Score bar
+  const barColor = score >= 60 ? 'var(--red)' : score >= 30 ? 'var(--amber)' : 'var(--green)';
+  document.getElementById('score-bar').style.width = score + '%';
+  document.getElementById('score-bar').style.background = barColor;
+  document.getElementById('score-pct-label').textContent = score + '%';
+  document.getElementById('timing-ms').textContent = elapsed;
+
+  // Factors
+  const ft = document.getElementById('factor-tags');
+  ft.innerHTML = factors.map(f =>
+    `<span class="factor-tag ${f.type}">${f.label}</span>`
+  ).join('');
+
+  // Headers
+  const hkv = document.getElementById('header-kv');
+  const hRows = [
+    ['from', fromName ? `${fromName} <${fromEmail}>` : fromEmail, 'cyan'],
+    ['reply-to', replyToEmail || '—', replyToEmail && replyToEmail !== fromEmail ? 'red' : null],
+    ['subject', subject, null],
+    ['date', date, null],
+    ['msg-id', msgId, null],
+    ['x-mailer', xMailer || '—', xMailer ? 'amber' : null],
+    ['return-path', extractField(headers, 'return-path') || '—', null],
+  ];
+  hkv.innerHTML = hRows.map(([k, v, cls]) =>
+    `<div class="kv-row"><span class="kv-key">${k}</span><span class="kv-val ${cls || ''}">${escHTML(v)}</span></div>`
+  ).join('');
+
+  // Auth
+  function setAuth(id, status) {
+    const icons = { pass: '✅', fail: '❌', softfail: '⚠️', none: '⬜', neutral: '➖', unknown: '❓' };
+    const cls = status === 'pass' ? 'pass' : (status === 'fail' || status === 'softfail') ? 'fail' : status === 'none' ? 'na' : 'warn';
+    document.getElementById(id + '-icon').textContent = icons[status] || '❓';
+    const el = document.getElementById(id + '-status');
+    el.textContent = status.toUpperCase();
+    el.className = 'auth-status ' + cls;
+  }
+  setAuth('spf', spf);
+  setAuth('dkim', dkim);
+  setAuth('dmarc', dmarc);
+
+  const ad = document.getElementById('auth-detail');
+  const authResults = extractField(headers, 'authentication-results');
+  ad.innerHTML = authResults
+    ? `<div class="kv-row"><span class="kv-key">raw</span><span class="kv-val" style="color:var(--text-faint);font-size:0.65rem;">${escHTML(authResults.substring(0, 300))}</span></div>`
+    : '';
+
+  // URLs with per-url VT badge placeholder
+  const suspiciousTLDs = ['.xyz', '.top', '.tk', '.ml', '.ga', '.ru', '.cn', '.pw'];
+  const shorteners = ['bit.ly', 'tinyurl', 'goo.gl', 'ow.ly'];
+  const ul = document.getElementById('url-list');
+  if (urls.length === 0) {
+    ul.innerHTML = '<div class="empty-msg">// no URLs found in email</div>';
+  } else {
+    ul.innerHTML = urls.slice(0, 15).map((url, i) => {
+      let risk = 'low', flags = [];
+      if (/https?:\/\/\d{1,3}\.\d{1,3}/.test(url)) { risk = 'high'; flags.push('IP address'); }
+      if (suspiciousTLDs.some(t => url.includes(t))) { risk = 'high'; flags.push('suspicious TLD'); }
+      if (shorteners.some(s => url.includes(s))) { risk = 'medium'; flags.push('URL shortener'); }
+      return `<div class="url-item">
+        <div class="url-risk ${risk}"></div>
+        <div style="flex:1">
+          <div class="url-text">${escHTML(url)}</div>
+          ${flags.length ? `<div class="url-flags">⚑ ${flags.join(' · ')}</div>` : ''}
+        </div>
+        <span class="vt-badge checking" id="vt-url-${i}">${vtApiKey ? 'VT...' : 'no VT key'}</span>
+      </div>`;
+    }).join('') + (urls.length > 15 ? `<div class="empty-msg">... +${urls.length - 15} more</div>` : '');
+  }
+
+  // IOC List
+  const iocEl = document.getElementById('ioc-list');
+  if (lastIOCs.length === 0) {
+    iocEl.innerHTML = '<div class="empty-msg">// no IOCs extracted</div>';
+  } else {
+    iocEl.innerHTML = lastIOCs.map((ioc, i) =>
+      `<div class="ioc-item">
+        <span class="ioc-type ${ioc.type}">${ioc.type.toUpperCase()}</span>
+        <span class="ioc-val">${escHTML(ioc.value)}</span>
+        <button class="copy-ioc" onclick="copyText('${escHTML(ioc.value).replace(/'/g,"\\'")}', this)" title="Copy">⎘</button>
+      </div>`
+    ).join('');
+  }
+
+  // Typosquatting
+  const typoEl = document.getElementById('typosquat-list');
+  if (typosquats.length === 0) {
+    typoEl.innerHTML = '<div class="empty-msg">// no typosquatting detected</div>';
+  } else {
+    typoEl.innerHTML = typosquats.map(t =>
+      `<div class="typo-item">
+        <span class="typo-sim">${t.similarity}% match</span>
+        <span style="color:var(--red)">${escHTML(t.domain)}</span>
+        <span style="color:var(--text-faint)">≈ impersonates</span>
+        <span style="color:var(--amber)">${t.brand}</span>
+        <span style="color:var(--text-faint);font-size:0.6rem;margin-left:auto;">edit dist: ${t.dist}</span>
+      </div>`
+    ).join('');
+  }
+
+  // Attachments
+  const al = document.getElementById('attach-list');
+  if (attachments.length === 0) {
+    al.innerHTML = '<div class="empty-msg">// no attachments found</div>';
+  } else {
+    const extIcons = { pdf: '📄', zip: '🗜️', exe: '💀', doc: '📝', xls: '📊', ppt: '📊', js: '⚡', default: '📎' };
+    al.innerHTML = attachments.map(a => {
+      const icon = extIcons[a.ext] || extIcons.default;
+      return `<div class="attach-item" style="${a.risky ? 'border-color:var(--red-dim);' : ''}">
+        <span class="attach-icon">${icon}</span>
+        <div>
+          <div class="attach-name">${escHTML(a.filename)} ${a.risky ? '<span style="color:var(--red);font-size:0.65rem;">[RISKY EXT]</span>' : ''}</div>
+          <div class="attach-hash">MD5: ${a.hash}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // JSON + Ticket
+  document.getElementById('json-output').textContent = JSON.stringify(caseFile, null, 2);
+  document.getElementById('ticket-output').textContent = ticket;
+
+  // Body preview
+  const bodyClean = body.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  document.getElementById('body-preview').textContent = bodyClean.substring(0, 1000) || '(no body text)';
+
+  // Show results
+  document.getElementById('drop-zone').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+
+  setTimeout(() => {
+    document.getElementById('score-bar').style.width = score + '%';
+  }, 100);
+
+  // Run VT checks asynchronously
+  if (vtApiKey && urls.length > 0) {
+    runVTChecks(urls);
+  }
+}
+
+async function runVTChecks(urls) {
+  const bar = document.getElementById('vt-status-bar');
+  const statusText = document.getElementById('vt-status-text');
+  bar.classList.add('show');
+
+  const toCheck = urls.slice(0, 4); // free tier: 4/min
+  for (let i = 0; i < toCheck.length; i++) {
+    statusText.textContent = `Scanning URL ${i+1}/${toCheck.length} with VirusTotal...`;
+    const result = await vtCheckUrl(toCheck[i]);
+    const badge = document.getElementById(`vt-url-${i}`);
+    if (badge && result !== null) {
+      if (result.malicious > 0) {
+        badge.className = 'vt-badge malicious';
+        badge.textContent = `VT: ${result.malicious}/${result.total} ❌`;
+      } else if (result.suspicious > 0) {
+        badge.className = 'vt-badge suspicious';
+        badge.textContent = `VT: ${result.suspicious} ⚠`;
+      } else {
+        badge.className = 'vt-badge clean';
+        badge.textContent = `VT: clean ✓`;
+      }
+    } else if (badge) {
+      badge.textContent = 'VT: err';
+    }
+    // Rate limit: wait 15s between requests on free tier
+    if (i < toCheck.length - 1) await new Promise(r => setTimeout(r, 15000));
+  }
+
+  if (urls.length > 4) {
+    statusText.textContent = `VT scan complete (4/${urls.length} checked — free tier limit). Upgrade for full scan.`;
+  } else {
+    statusText.textContent = `VirusTotal scan complete.`;
+  }
+  setTimeout(() => bar.classList.remove('show'), 4000);
+}
+
+function buildTicket(cf, factors, verdictLabel) {
+  const sep = '─'.repeat(50);
+  const lines = [
+    `# 🎫 PHISHTRIAGE — INCIDENT TICKET`,
+    ``,
+    `**Generated:** ${cf.analyzed_at}`,
+    `**File:** \`${cf.filename}\``,
+    ``,
+    sep,
+    `## VERDICT: ${verdictLabel}`,
+    `**Score:** ${cf.phishing_score}/100`,
+    sep,
+    ``,
+    `## Email Details`,
+    `| Field | Value |`,
+    `|-------|-------|`,
+    `| From | \`${cf.from}\` |`,
+    `| Reply-To | \`${cf.reply_to || 'N/A'}\` |`,
+    `| Subject | ${cf.subject} |`,
+    `| Date | ${cf.date} |`,
+    `| Message-ID | \`${cf.message_id}\` |`,
+    ``,
+    `## Authentication`,
+    `| Protocol | Result |`,
+    `|----------|--------|`,
+    `| SPF | **${cf.auth.spf.toUpperCase()}** |`,
+    `| DKIM | **${cf.auth.dkim.toUpperCase()}** |`,
+    `| DMARC | **${cf.auth.dmarc.toUpperCase()}** |`,
+    ``,
+    `## Score Factors`,
+    ...factors.map(f => `- [${f.type === 'bad' ? '✗' : f.type === 'warn' ? '!' : '✓'}] **${f.label}**`),
+    ``,
+    `## IOCs`,
+    `### URLs (${cf.iocs.urls_extracted.length})`,
+    ...(cf.iocs.urls_extracted.length ? cf.iocs.urls_extracted.slice(0, 10).map(u => `- \`${u}\``) : ['- None']),
+    `### Domains (${cf.iocs.domains_extracted.length})`,
+    ...(cf.iocs.domains_extracted.length ? cf.iocs.domains_extracted.map(d => `- \`${d}\``) : ['- None']),
+    `### IPs (${cf.iocs.ips_extracted.length})`,
+    ...(cf.iocs.ips_extracted.length ? cf.iocs.ips_extracted.map(ip => `- \`${ip}\``) : ['- None']),
+    ``,
+    ...(cf.typosquatting_detected.length ? [
+      `## Typosquatting`,
+      ...cf.typosquatting_detected.map(t => `- \`${t.domain}\` → impersonates **${t.impersonates}** (${t.similarity_pct}% similarity)`),
+      ``
+    ] : []),
+    `## Attachments (${cf.attachments.length})`,
+    ...(cf.attachments.length ? cf.attachments.map(a => `- \`${a.filename}\` — MD5: \`${a.md5}\` ${a.risky ? '⚠ RISKY' : ''}`) : ['- None']),
+    ``,
+    sep,
+    `*PhishTriage v2.0 — open source email analysis*`,
+  ];
+  return lines.join('\n');
+}
+
+function escHTML(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text);
+  if (btn) { btn.textContent = '✓'; setTimeout(() => btn.textContent = '⎘', 1200); }
+}
+
+function copyAllIOCs() {
+  if (!lastIOCs.length) return;
+  const text = lastIOCs.map(ioc => `[${ioc.type.toUpperCase()}] ${ioc.value}`).join('\n');
+  navigator.clipboard.writeText(text);
+}
+
+// ─────────────────────────────────────────────
+// FILE HANDLING
+// ─────────────────────────────────────────────
+
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => renderResults(ev.target.result, file.name);
+  reader.readAsText(file);
+});
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => renderResults(ev.target.result, file.name);
+  reader.readAsText(file);
+});
+
+function resetTool() {
+  document.getElementById('drop-zone').style.display = '';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  lastResult = null;
+  lastIOCs = [];
+}
+
+function copyJSON() {
+  if (lastResult) navigator.clipboard.writeText(JSON.stringify(lastResult.caseFile, null, 2));
+}
+
+function copyTicket() {
+  if (lastResult) navigator.clipboard.writeText(lastResult.ticket);
+}
+
+// ─────────────────────────────────────────────
+// SAMPLE EMAIL
+// ─────────────────────────────────────────────
+
+function loadSample() {
+  const sample = `From: "PayPal Security" <security-alert@paypa1-verification.xyz>
+Reply-To: noreply@paypa1-verify.top
+To: victim@example.com
+Subject: URGENT: Your PayPal Account Has Been Suspended - Verify Immediately
+Date: Mon, 15 May 2024 08:23:11 -0500
+Message-ID: <abc123@paypa1-verification.xyz>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Authentication-Results: mx.example.com;
+  spf=fail (sender IP is 185.220.101.45) smtp.mailfrom=paypa1-verification.xyz;
+  dkim=fail header.d=paypa1-verification.xyz;
+  dmarc=fail action=none header.from=paypa1-verification.xyz
+Received-SPF: fail (domain of paypa1-verification.xyz does not designate 185.220.101.45 as permitted sender)
+X-Mailer: PhishKit v3.2
+
+<html><body>
+<p>Dear Customer,</p>
+<p>Your PayPal account has been suspended due to unusual activity. You must verify your account immediately or it will be permanently limited.</p>
+<p>Please click here to confirm your identity and restore access:</p>
+<a href="http://185.220.101.45/paypal/login?ref=suspend">http://185.220.101.45/paypal/login?ref=suspend</a>
+<p>Additionally, click the link below to update your payment information:</p>
+<a href="https://bit.ly/3xVerify">https://bit.ly/3xVerify</a>
+<p>Also verify via our secure portal:</p>
+<a href="https://paypal-secure.xyz/verify">https://paypal-secure.xyz/verify</a>
+<p>Action required within 24 hours. Failure to comply will result in account termination.</p>
+<p>PayPal Security Team</p>
+</body></html>`;
+
+  renderResults(sample, 'sample_phishing.eml');
+}
+</script>
+</body>
+</html>
