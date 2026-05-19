@@ -33,6 +33,11 @@ No install. No signup. Just drop an `.eml` file.
 ## 📸 Screenshot
 
 > *(Add a screenshot of the results panel here)*
+>
+> ### 🎥 Demo Video
+
+<video src="https://github.com/ritesh978/phishtriage/blob/main/assets/tooldemo.mp4.webm?raw=true" controls></video>
+
 
 ---
 
