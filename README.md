@@ -33,6 +33,8 @@ No install. No signup. Just drop an `.eml` file.
 ## 📸 Screenshot
 
 > *(Add a screenshot of the results panel here)*
+> ![Screenshot](assets/screenshot1.png)
+
 >
 > ### 🎥 Demo Video
 
