@@ -32,8 +32,10 @@ No install. No signup. Just drop an `.eml` file.
 
 ## 📸 Screenshot
 
-> *(Add a screenshot of the results panel here)*
+> *Here’s the screenshot of the tool in action:*
 > ![Screenshot](https://github.com/ritesh978/phishtriage/blob/main/assets/Screenshot%201.png?raw=true)
+> ![Screenshot](https://github.com/ritesh978/phishtriage/blob/main/assets/Screenshot%202.png?raw=true)
+
 
 
 >
