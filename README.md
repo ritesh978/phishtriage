@@ -36,7 +36,7 @@ No install. No signup. Just drop an `.eml` file.
 >
 > ### 🎥 Demo Video
 
-<video src="https://github.com/ritesh978/phishtriage/blob/main/assets/tooldemo.mp4.webm?raw=true" controls></video>
+<video src="https://github.com/ritesh978/phishtriage/blob/main/assets/tooldemo.mp4.mp4?raw=true" controls></video>
 
 
 ---
