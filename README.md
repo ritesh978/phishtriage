@@ -33,7 +33,8 @@ No install. No signup. Just drop an `.eml` file.
 ## 📸 Screenshot
 
 > *(Add a screenshot of the results panel here)*
-> ![Screenshot](assets/screenshot1.png)
+> ![Screenshot](https://github.com/ritesh978/phishtriage/blob/main/assets/Screenshot%201.png?raw=true)
+
 
 >
 > ### 🎥 Demo Video
