@@ -24,7 +24,7 @@ PhishTriage parses raw email files (`.eml`) entirely in the browser and produces
 
 ## 🚀 Live Demo
 
-👉 **[Try it here](https://YOUR_USERNAME.github.io/phishtriage)**
+👉 **[Try it here](https://ritesh978.github.io/phishtriage)**
 
 No install. No signup. Just drop an `.eml` file.
 
